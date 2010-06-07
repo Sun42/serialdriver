@@ -1,3 +1,2 @@
-
 sudo mknod -m 777 /dev/myserial c 84 42
 echo "salut" > dev/myserial

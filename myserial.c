@@ -43,6 +43,9 @@ ssize_t my_read(struct file *file, char *buf, size_t len, loff_t *pos)
   int	datum;
 
   printk(KERN_INFO "my_read()");
+  printk(KERN_INFO "buf %s", buf);
+  printk(KERN_INFO "len %i", len);
+
   // raise the 'Clear-To-Send' indicator
   outb(0x02, MODEM_CONTROL);// set RTS=1 
   // spin until some received data is ready 
@@ -68,6 +71,8 @@ ssize_t my_write(struct file *file, const char *buf, size_t len, loff_t *pos)
   int	datum;
 
   printk(KERN_INFO "my_write()");
+  printk(KERN_INFO "buf %s", buf);
+  printk(KERN_INFO "len %i", len);
   // turn on the 'Request-To-Send' signal
   outb(0x02, MODEM_CONTROL);// RTS=1
 

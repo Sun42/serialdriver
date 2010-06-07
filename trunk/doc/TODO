@@ -1,0 +1,2 @@
+- determiner le type de la puce UART et l'adresse du port serie
+- setter le driver sur l'irq4 et  sur /dev/ttyS1

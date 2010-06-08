@@ -1,15 +1,15 @@
 #ifndef MYSERIAL_H
 # define MYSERIAL_H
 
-#include <linux/module.h>	// for init_module() 
-#include <linux/proc_fs.h>	// for create_proc_read_entry() 
+#include <linux/module.h>	// for init_module()
+#include <linux/proc_fs.h>	// for create_proc_read_entry()
 #include <linux/interrupt.h>	// for request_irq()
 #include <linux/poll.h>		// for poll_wait()
 #include <asm/uaccess.h>	// for copy_to/from_user()
 #include <asm/io.h>		// for inb(), outb()
 #include <linux/sched.h>	//for TASK_INTERUPTIBLE macro
 
-ssize_t		my_read(struct file *file, char *buf, size_t len, loff_t *pos); 
+ssize_t		my_read(struct file *file, char *buf, size_t len, loff_t *pos);
 ssize_t		my_write(struct file *file, const char *buf, size_t len, loff_t *pos);
 unsigned int	my_poll(struct file *file, struct poll_table_struct *wait);
 

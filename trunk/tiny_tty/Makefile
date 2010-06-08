@@ -1,4 +1,4 @@
-obj-m += tiny_tty3.o
+obj-m += tiny_tty.o
 
 all:
     make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules

@@ -1,140 +1,194 @@
+//A character-mode device-driver for the 16550 Serial UART.
+//for cables without DTR<-->DSR
 //-------------------------------------------------------------------
-//myserial.c
-//
-//This driver gives a minimal working solution for Project #2.
-//Its 'module_init()' routine programs the UART's baudrate and 
-//its data-format, configuring the UART to operate in non-FIFO 
-//polled-mode (i.e., without any interrupts); the 'read()' and 
-//'write()' functions use the RTS/CTS signals for handshaking, 
-//and the null-modem cable's DSR/DTS signal-lines aren't used.
-//
-//NOTE: Written and tested for Linux kernel version 2.6.22.5.
-//
-//programmer: ALLAN CRUSE
-//written on: 24 OCT 2007
-//-------------------------------------------------------------------
+#include "myserial.h"
 
-#include <linux/module.h>// for init_module() 
-#include <linux/fs.h>// for register_chrdev()
-#include <linux/sched.h>// for schedule()
-#include <asm/uaccess.h>// for copy_to/from_user()
-#include <asm/io.h>// for inb(), outb()
+/** 
+ ** my_isr 
+ ** @irq
+ ** @devinfo 
+ **/
 
-#define UARTBASE 0x03F8 // t'veux gouter ma chip gamin?
-#define DIVISOR_LATCH (UARTBASE + 0) // c'est un peu latch tout de meme
-#define TRANSMIT_DATA (UARTBASE + 0)
-#define RECEIVE_DATA (UARTBASE + 0)
-#define INTR_ENABLE (UARTBASE + 1)
-#define INTR_IDENTIFY (UARTBASE + 2)
-#define FIFO_CONTROL (UARTBASE + 2)
-#define LINE_CONTROL (UARTBASE + 3)
-#define MODEM_CONTROL (UARTBASE + 4)
-#define LINE_STATUS (UARTBASE + 5)
-#define MODEM_STATUS (UARTBASE + 6)
-#define UART_SCRATCH (UARTBASE + 7)
+irqreturn_t my_isr(int irq, void *devinfo)
+{
+  // static intrep = 0;
+  int	interrupt_id = inb(UART_INTR_ID) & 0x0F;
+  if (interrupt_id & 1)
+    return IRQ_NONE;
 
-char modname[] = "myserial";
-char devname[] = "uart";
-int my_major = 84;
+  // ++rep;
+  // printk( "UART %d: interrupt_id=%02X \n", rep, interrupt_id );
+
+  switch (interrupt_id)
+    {
+    case 6:	// Receiver Line Status (errors)
+      inb(UART_LINE_STAT);
+      break;
+    case 4:	// Received Data Ready
+    case 12:	// Character timeout
+      wake_up_interruptible(&waitq_recv);
+      break;
+    case 2:	// Transmitter Empty 
+      wake_up_interruptible(&waitq_xmit);
+      break;
+    case 0:	// Modem Status Changed
+      inb(UART_MODEM_STAT);
+      break;
+    }
+  return IRQ_HANDLED;
+}
+
+/**
+ ** BTW: Un ‘interruptible’ sleep > un sleep car il peut etre reveille par un signal,
+ ** au cas ou l'on voudrait `unload` le driver par exemple
+ **/
+
+
+int	my_proc_read(char *buf, char **start, off_t off, int count, int *eof, void *data) 
+{
+  int interrupt_id = inb(UART_INTR_ID);
+  int line_status = inb(UART_LINE_STAT);
+  int modem_status = inb(UART_MODEM_STAT);
+  int len = 0;
+  
+  len += sprintf(buf + len, "\n %02X=modem_status  ", modem_status);
+  len += sprintf(buf + len, "\n %02X=line_status   ", line_status);
+  len += sprintf(buf + len, "\n %02X=interrupt_id  ", interrupt_id);
+  len += sprintf(buf + len, "\n\n");
+
+  return len;
+}
+
+/*
+** TODO : configurer tty en serial
+** Initialisation du module/driver, configuration de l'uart
+*/
+static int __init	uart_init(void)
+{
+  printk(KERN_INFO "\nInstalling \'%s\' module\n", modname);
+  
+
+  //initialisation de files d'attentes emission/reception
+  init_waitqueue_head(&waitq_xmit);
+  init_waitqueue_head(&waitq_recv);
+
+  // configure l' UART
+  outb(0x00, UART_INTR_EN);
+  outb(0xC7, UART_FIFO_CTRL);
+  outb(0x83, UART_LINE_CTRL);
+  outb(0x01, UART_DLATCH_LO);
+  outb(0x00, UART_DLATCH_HI);
+  outb(0x03, UART_LINE_CTRL);
+  outb(0x03, UART_MODEM_CTRL);
+  inb(UART_MODEM_STAT);
+  inb(UART_LINE_STAT);
+  inb(UART_RX_DATA);
+  inb(UART_INTR_ID);
+  
+  // demane d'irq
+  if (request_irq(UART_IRQ, my_isr, IRQF_SHARED, modname, &modname) < 0)
+    {
+      printk(KERN_WARNING, "%s couldn't get IRQ %i", module, UART_IRQ);
+      return -EBUSY;
+    }
+  outb(INTR_MASK, UART_INTR_EN);
+  outb(0x0B, UART_MODEM_CTRL);
+  printk(KERN_INFO " Interrupt-ID: %02X \n", inb(UART_INTR_ID));
+
+  create_proc_read_entry(modname, 0, NULL, my_proc_read, NULL);
+  return register_chrdev(my_major, modname, &my_fops);
+}
+
+
+static void __exit	uart_exit(void)
+{
+  unregister_chrdev(my_major, modname);
+  remove_proc_entry(modname, NULL);
+
+  outb( 0x00, UART_INTR_EN);
+  outb( 0x00, UART_MODEM_CTRL);
+  free_irq(UART_IRQ, modname);
+
+  printk(KERN_INFO "<1>Removing \'%s\' module\n", modname);
+}
+
+module_init(uart_init);
+module_exit(uart_exit);
+MODULE_LICENSE("GPL"); 
 
 ssize_t my_read(struct file *file, char *buf, size_t len, loff_t *pos)
 {
-  // latin for the win ?
-  int	datum;
-
-  printk(KERN_INFO "my_read()");
-  printk(KERN_INFO "buf %s", buf);
-  printk(KERN_INFO "len %i", len);
-
-  // raise the 'Clear-To-Send' indicator
-  outb(0x02, MODEM_CONTROL);// set RTS=1 
-  // spin until some received data is ready 
-  while ((inb( LINE_STATUS) & 0x01) == 0x00)
+  int count, i, line_status = inb(UART_LINE_STAT);
+  
+  if ((line_status & 1) == 0)
     {
-      schedule();// yield the CPU to other tasks
-      if (signal_pending(current))
+      if (file->f_flags & O_NONBLOCK)
+	return 0;
+      if (wait_event_interruptible(waitq_recv,(inb( UART_LINE_STAT) & 1)))
 	return -EINTR;
     }
-  // lower the 'Clear-To-Send' indicator
-  outb(0x00, MODEM_CONTROL);// set RTS = 0 
-  // input one received character and put it into user's buffer
-  datum = inb(RECEIVE_DATA);
-  if (put_user(datum, buf))
-    return -EFAULT;
-    printk(KERN_INFO "my_read() return 1");
-  // tell the kernel that one byte has been transferred
-  return 1;
+  
+  count = 0;
+  for (i = 0; i < len; i++)
+    {
+      unsigned char datum = inb(UART_RX_DATA);
+      if (copy_to_user(buf + i, &datum, 1))
+	return -EFAULT;
+      ++count;
+      if ((inb(UART_LINE_STAT) & 1) == 0)
+	break;
+    }
+  return count;
 }
 
 ssize_t my_write(struct file *file, const char *buf, size_t len, loff_t *pos)
 {
-  int	datum;
+  int	i, count = 0;
+  int   modem_status = inb(UART_MODEM_STAT);
 
-  printk(KERN_INFO "my_write()");
-  printk(KERN_INFO "buf %s", buf);
-  printk(KERN_INFO "len %i", len);
-  // turn on the 'Request-To-Send' signal
-  outb(0x02, MODEM_CONTROL);// RTS=1
-
-  // wait until the 'Clear-To-Send' status is 'true'
-  while ((inb(MODEM_STATUS) & 0x10) == 0x00)
+  if ((modem_status & 0x10) != 0x10)
     {
-      schedule();// yield the CPU to other tasks
-      if (signal_pending(current))
-	return -EINTR;
+      if (file->f_flags & O_NONBLOCK)
+	return 0;
+      if (wait_event_interruptible(waitq_xmit, (inb(UART_MODEM_STAT)& 0x10) == 0x10))
+	return -EINTR; 
     }
 
-  // turn off the Request-To-Send signal
-  outb(0x00, MODEM_CONTROL);// RTS=0
-
-  // spin if necessary until THRE==1, oh! la belle boucle
-  while ((inb(LINE_STATUS) & 0x20) == 0x00);
-
-  // get a byte from the user's buffer and output it to the UART
-  if (get_user(datum, buf))
-    return -EFAULT;
-  outb(datum, TRANSMIT_DATA);
-
-  printk(KERN_INFO "my_write() return 1");
-  // tell the kerrnel that one data-byte was transferred
-  return 1;
+  for (i = 0; i < len; i++)
+    {
+      unsigned char datum;
+      if (copy_from_user(&datum, buf + i, 1))
+	return -EFAULT;
+      while ((inb(UART_LINE_STAT) & 0x20) == 0); 
+      outb(datum, UART_TX_DATA);
+      ++count;
+      if ((inb(UART_MODEM_STAT) & 0x10) != 0x10)
+	break; 
+    }
+  return count;
 }
 
-struct file_operations my_fops = 
-{ 
- owner:THIS_MODULE,
- read:my_read,
- write:my_write, 
-};
-
-static int __init my_init(void)
+/**
+ ** poll sert a multiplexer notre driver
+ **
+ **/
+unsigned int my_poll(struct file *file, struct poll_table_struct *wait)
 {
-  printk("<1>\nInstalling \'%s\' module ", modname);
-  printk("(major=%d) \n", my_major);
+  unsigned int mask = 0;
 
-  // configure the UART for non-FIFO polled-mode operation
-  outb(0x00, INTR_ENABLE);// no interrupts
-  outb(0x00, FIFO_CONTROL); // non-FIFO mode
-  outb(0x83, LINE_CONTROL);// set DLAB=1
-  outw(0x0001, DIVISOR_LATCH);// maximum baudrate
-  outb(0x03, LINE_CONTROL);// 8-N-1 data-frame
-  outb(0x00, MODEM_CONTROL);// RTS=0 
+  /** 
+   ** Met en file d'attente le processus courant dans toutes les files d'attentes
+   ** susceptibles de le reveiller par la suite (poll_wait)
+   ** poll_wait: http://www.makelinux.net/ldd3/chp-6-sect-3.shtml
+   **/
+  poll_wait(file, &waitq_recv, wait);
+  poll_wait(file, &waitq_xmit, wait);
 
-  return register_chrdev(my_major, devname, &my_fops);
+  // si read() est ready pour retourner de la data
+  if (inb(UART_LINE_STAT) & 0x01)
+    mask |= (POLLIN | POLLRDNORM);
+  // si write() est ready pour accepter de la data
+  if (inb(UART_LINE_STAT) & 0x20)
+    mask |= (POLLOUT | POLLWRNORM);
+  return mask;
 }
-
-static void __exit my_exit(void)
-{
-  unregister_chrdev(my_major, devname);
-  printk(KERN_INFO "Module myserial unloaded");
-}
-
-module_init(my_init);
-module_exit(my_exit);
-MODULE_LICENSE("GPL"); 
-
-
-/*
-** BTW 1: uart = microchip needed to 'serial to parallel' the info for the CPU
-** since cpu require parallelized octet
-*/

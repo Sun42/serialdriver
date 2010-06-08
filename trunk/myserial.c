@@ -82,17 +82,27 @@ static int __init	uart_init(void)
   /*
   ** Chris:  faut-il prendre en compte l'endianess (little)?, le 14 bytes me parait louche, le reste me parait logique
   ** 0xC7 <=> 1100 0111
-  ** Bit 0  : [1]	=> Enable FIFO
-  ** Bit 1  : [1]	=> Clear receive FIFO
-  ** Bit 2  : [1]	=> Clear transmit FIFO
-  ** Bit 3  : [0]	=> DMA mode 0
-  ** Bit 4  : [0]	=> Reserved
-  ** Bit 5  : [0]	=> NO 64 bit
-  ** Bit 6/7: [1][1]	=> interupt every 14 bytes 
+  ** Bit 0	[1]	=> Enable FIFO
+  ** Bit 1	[1]	=> Clear receive FIFO
+  ** Bit 2	[1]	=> Clear transmit FIFO
+  ** Bit 3	[0]	=> DMA mode 0
+  ** Bit 4	[0]	=> Reserved
+  ** Bit 5	[0]	=> No, no, no i said no 64 bit
+  ** Bit 6/7	[1][1]	=> interupt every 14 bytes 
    */
   outb(0xC7, UART_FCR);
 
-  /
+  //83 10000011
+
+  /*
+  ** 0x83 <=> 1000 0011
+  ** Bit 0/1	[1][1]		=> data word len  8 bits (oups ca coincide pas avec le 14 bytes j'ai du fail dans l'endianess)
+  ** Bit 2	[0]		=> 1 seul stop bit
+  ** Bit 3/4/5	[0][0][0]	=> no parity
+  ** Bit 6	[0]		=> Break signal disabled
+  ** Bit 7	[1]		=> DLAB : DLM et DLL accessible- > a completer
+   */
+
   outb(0x83, UART_LCR);
   outb(0x01, UART_DLATCH_LO);
   outb(0x00, UART_DLATCH_HI);

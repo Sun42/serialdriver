@@ -1,2 +1,5 @@
-- determiner le type de la puce UART et l'adresse du port serie
-- setter le driver sur l'irq4 et  sur /dev/ttyS1
+- implementer probe attach detach (existe sous linux ?)
+- completer les commentaires pour pas se faire pwn en soutenance
+- setter le tty en serial
+- tester avec un major number de 4
+- poll & multiplexage a enlever ? incompatible avec RS-232 protocole RTS etc ? (fregux)

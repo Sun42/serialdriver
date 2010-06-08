@@ -1,0 +1,20 @@
+Dans VirtualBox configurer le port serie comme ca:
+Port Numero : COM1
+Mode port : tuyau hote (host pipe)
+Creer un tuyau : Enable
+Chemin fichier : /tmp/vboxS0
+
+Sur la machine guest:
+$ sudo aptitude install cutecom
+$ cutecom
+config cutecom:
+device : /dev/ttyS0
+baud : 9600 (j'ai pas teste avec autre chose)
+
+Sur la machine host :
+$ sudo aptitude install socat
+$ socat UNIX-CONNECT:/tmp/vboxS0 TCP-LISTEN:7777
+Dans un autre term:
+$ telnet localhost 7777
+
+En racontant sa vie dans telnet elle devrait s'afficher sur cutecom (machine guest) et vice versa

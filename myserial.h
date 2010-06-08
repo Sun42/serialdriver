@@ -7,7 +7,7 @@
 #include <linux/poll.h>		// for poll_wait()
 #include <asm/uaccess.h>	// for copy_to/from_user()
 #include <asm/io.h>		// for inb(), outb()
-#include <linux/sched.h>	//for TASK_INTERUPTIBLE macro
+#include <linux/sched.h>	// for TASK_INTERUPTIBLE macro
 
 ssize_t		my_read(struct file *file, char *buf, size_t len, loff_t *pos);
 ssize_t		my_write(struct file *file, const char *buf, size_t len, loff_t *pos);
@@ -17,15 +17,15 @@ unsigned int	my_poll(struct file *file, struct poll_table_struct *wait);
 irqreturn_t	my_isr(int irq, void *devinfo);
 int		my_proc_read(char *buf, char **start, off_t off, int count, int *eof, void *data);
 
-#define UART_IRQ	4	// UART's Interrupt Request pin
-#define UART_BASE	0x03F8	// UART's base I/O port-address
-#define INTR_MASK	0x0F	// UART Interrupt Mask
+#define UART_IRQ	4		// UART's Interrupt Request pin
+#define UART_BASE	0x03F8		// UART's base I/O port-address
+#define INTR_MASK	0x0F		// UART Interrupt Mask
 
 enum {
   UART_RX_DATA = UART_BASE + 0,		//
   UART_TX_DATA = UART_BASE + 0,		//
-  UART_DLATCH_LO = UART_BASE + 0,	// DLL divisor latch lsb
-  UART_DLATCH_HI = UART_BASE + 1,	// DLM divisor latch msb
+  UART_DLL = UART_BASE + 0,		// DLL divisor latch lsb
+  UART_DLM = UART_BASE + 1,		// DLM divisor latch msb
   UART_IER = UART_BASE + 1,		// Interrupt enable register
   UART_IIR = UART_BASE + 2,		// Interrupt identification register
   UART_FCR = UART_BASE + 2,		// Fifo Control Register

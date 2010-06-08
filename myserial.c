@@ -8,7 +8,6 @@
  ** @irq
  ** @devinfo 
  **/
-
 irqreturn_t my_isr(int irq, void *devinfo)
 {
   // static intrep = 0;
@@ -101,15 +100,23 @@ static int __init	uart_init(void)
   ** Bit 6	[0]		=> Break signal disabled
   ** Bit 7	[1]		=> DLAB : DLM et DLL accessible- > a completer
    */
-
   outb(0x83, UART_LCR);
-  outb(0x01, UART_DLATCH_LO);
-  outb(0x00, UART_DLATCH_HI);
+
+  //9600 bauds max
+  outb(0x0C, UART_DLL);
+  outb(0x00, UART_DLM);
+  // data word len = 8 bits
   outb(0x03, UART_LCR);
+  // DTR = true  RTS = true (pas certain)
   outb(0x03, UART_MCR);
+
+  // reseting 4 lsb registers qui vont servir pour la reception et transmission de data
   inb(UART_MSR);
+  // ??
   inb(UART_LSR);
+  // ??
   inb(UART_RX_DATA);
+  // ??
   inb(UART_IIR);
   
   // demande d'irq
@@ -118,6 +125,7 @@ static int __init	uart_init(void)
       printk(KERN_WARNING "%s couldn't get IRQ %i", modname, UART_IRQ);
       return -EBUSY;
     }
+  //
   outb(INTR_MASK, UART_IER);
   // ??
   outb(0x0B, UART_MCR);
@@ -180,7 +188,7 @@ ssize_t my_write(struct file *file, const char *buf, size_t len, loff_t *pos)
     {
       if (file->f_flags & O_NONBLOCK)
 	return 0;
-      if (wait_event_interruptible(waitq_xmit, (inb(UART_MSR)& 0x10) == 0x10))
+      if (wait_event_interruptible(waitq_xmit, (inb(UART_MSR) & 0x10) == 0x10))
 	return -EINTR; 
     }
 
@@ -209,12 +217,14 @@ unsigned int my_poll(struct file *file, struct poll_table_struct *wait)
   /** 
    ** Met en file d'attente le processus courant dans toutes les files d'attentes
    ** susceptibles de le reveiller par la suite (poll_wait)
-   ** poll_wait: http://www.makelinux.net/ldd3/chp-6-sect-3.shtml
    **/
   poll_wait(file, &waitq_recv, wait);
   poll_wait(file, &waitq_xmit, wait);
 
-  // si read() est ready pour retourner de la data
+  /*
+  ** si read() est ready pour retourner de la data
+  ** on retourne le mask correspondant
+  */
   if (inb(UART_LSR) & 0x01)
     mask |= (POLLIN | POLLRDNORM);
   // si write() est ready pour accepter de la data

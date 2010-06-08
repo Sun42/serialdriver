@@ -65,7 +65,6 @@ int	my_proc_read(char *buf, char **start, off_t off, int count, int *eof, void *
 static int __init	uart_init(void)
 {
   printk(KERN_INFO "\nInstalling \'%s\' module\n", modname);
-  
 
   //initialisation de files d'attentes emission/reception
   init_waitqueue_head(&waitq_xmit);
@@ -116,7 +115,7 @@ static int __init	uart_init(void)
   // demande d'irq
   if (request_irq(UART_IRQ, my_isr, IRQF_SHARED, modname, &modname) < 0)
     {
-      printk(KERN_WARNING, "%s couldn't get IRQ %i", module, UART_IRQ);
+      printk(KERN_WARNING "%s couldn't get IRQ %i", modname, UART_IRQ);
       return -EBUSY;
     }
   outb(INTR_MASK, UART_IER);

@@ -3,10 +3,10 @@
 //-------------------------------------------------------------------
 #include "myserial.h"
 
-/** 
- ** my_isr 
+/**
+ ** my_isr
  ** @irq
- ** @devinfo 
+ ** @devinfo
  **/
 
 irqreturn_t my_isr(int irq, void *devinfo)
@@ -28,7 +28,7 @@ irqreturn_t my_isr(int irq, void *devinfo)
     case 12:	// Character timeout
       wake_up_interruptible(&waitq_recv);
       break;
-    case 2:	// Transmitter Empty 
+    case 2:	// Transmitter Empty
       wake_up_interruptible(&waitq_xmit);
       break;
     case 0:	// Modem Status Changed
@@ -44,13 +44,13 @@ irqreturn_t my_isr(int irq, void *devinfo)
  **/
 
 
-int	my_proc_read(char *buf, char **start, off_t off, int count, int *eof, void *data) 
+int	my_proc_read(char *buf, char **start, off_t off, int count, int *eof, void *data)
 {
   int interrupt_id = inb(UART_INTR_ID);
   int line_status = inb(UART_LINE_STAT);
   int modem_status = inb(UART_MODEM_STAT);
   int len = 0;
-  
+
   len += sprintf(buf + len, "\n %02X=modem_status  ", modem_status);
   len += sprintf(buf + len, "\n %02X=line_status   ", line_status);
   len += sprintf(buf + len, "\n %02X=interrupt_id  ", interrupt_id);
@@ -66,7 +66,7 @@ int	my_proc_read(char *buf, char **start, off_t off, int count, int *eof, void *
 static int __init	uart_init(void)
 {
   printk(KERN_INFO "\nInstalling \'%s\' module\n", modname);
-  
+
 
   //initialisation de files d'attentes emission/reception
   init_waitqueue_head(&waitq_xmit);
@@ -84,7 +84,7 @@ static int __init	uart_init(void)
   inb(UART_LINE_STAT);
   inb(UART_RX_DATA);
   inb(UART_INTR_ID);
-  
+
   // demane d'irq
   if (request_irq(UART_IRQ, my_isr, IRQF_SHARED, modname, &modname) < 0)
     {
@@ -114,12 +114,12 @@ static void __exit	uart_exit(void)
 
 module_init(uart_init);
 module_exit(uart_exit);
-MODULE_LICENSE("GPL"); 
+MODULE_LICENSE("GPL");
 
 ssize_t my_read(struct file *file, char *buf, size_t len, loff_t *pos)
 {
   int count, i, line_status = inb(UART_LINE_STAT);
-  
+
   if ((line_status & 1) == 0)
     {
       if (file->f_flags & O_NONBLOCK)
@@ -127,7 +127,7 @@ ssize_t my_read(struct file *file, char *buf, size_t len, loff_t *pos)
       if (wait_event_interruptible(waitq_recv,(inb( UART_LINE_STAT) & 1)))
 	return -EINTR;
     }
-  
+
   count = 0;
   for (i = 0; i < len; i++)
     {
@@ -151,7 +151,7 @@ ssize_t my_write(struct file *file, const char *buf, size_t len, loff_t *pos)
       if (file->f_flags & O_NONBLOCK)
 	return 0;
       if (wait_event_interruptible(waitq_xmit, (inb(UART_MODEM_STAT)& 0x10) == 0x10))
-	return -EINTR; 
+	return -EINTR;
     }
 
   for (i = 0; i < len; i++)
@@ -159,11 +159,11 @@ ssize_t my_write(struct file *file, const char *buf, size_t len, loff_t *pos)
       unsigned char datum;
       if (copy_from_user(&datum, buf + i, 1))
 	return -EFAULT;
-      while ((inb(UART_LINE_STAT) & 0x20) == 0); 
+      while ((inb(UART_LINE_STAT) & 0x20) == 0);
       outb(datum, UART_TX_DATA);
       ++count;
       if ((inb(UART_MODEM_STAT) & 0x10) != 0x10)
-	break; 
+	break;
     }
   return count;
 }
@@ -176,7 +176,7 @@ unsigned int my_poll(struct file *file, struct poll_table_struct *wait)
 {
   unsigned int mask = 0;
 
-  /** 
+  /**
    ** Met en file d'attente le processus courant dans toutes les files d'attentes
    ** susceptibles de le reveiller par la suite (poll_wait)
    ** poll_wait: http://www.makelinux.net/ldd3/chp-6-sect-3.shtml

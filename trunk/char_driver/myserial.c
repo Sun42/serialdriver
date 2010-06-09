@@ -125,9 +125,7 @@ static int __init	uart_init(void)
       printk(KERN_WARNING "%s couldn't get IRQ %i", modname, UART_IRQ);
       return -EBUSY;
     }
-  //
   outb(INTR_MASK, UART_IER);
-  // ??
   outb(0x0B, UART_MCR);
   printk(KERN_INFO " Interrupt-ID: %02X \n", inb(UART_IIR));
 

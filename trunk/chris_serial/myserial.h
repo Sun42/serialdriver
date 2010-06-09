@@ -5,6 +5,8 @@
 #include <linux/errno.h>
 #include <linux/init.h>
 #include <linux/module.h>		
+#include <linux/device.h>
+
 
 
 #include <linux/console.h> 
@@ -14,28 +16,36 @@
 #include <linux/serial_core.h>		// high level serial API
 
 # define MYSERIAL_PORT     4
+# define DRIVER_VERSION "0.1"
+# define DRIVER_AUTHOR "Chris"
+# define DRIVER_DESC "Super Serial Driver"
+# define MYSERIAL_NAME "myserial"
+# define MYSERIAL_NR	1
 
-#define DRIVER_VERSION "0.1"
-#define DRIVER_AUTHOR "Chris"
-#define DRIVER_DESC "Super Serial Driver"
 
-static void myserial_stop_tx(struct uart_port *port);
-static void myserial_start_tx(struct uart_port *port);
-static void myserial_stop_rx(struct uart_port *port);
+static void		myserial_stop_tx(struct uart_port *port);
+static void		myserial_start_tx(struct uart_port *port);
+static void		myserial_stop_rx(struct uart_port *port);
 static void		myserial_enable_ms(struct uart_port *port);
-static int myserial_startup(struct uart_port *port);
-static void myserial_shutdown(struct uart_port *port);
-static unsigned int myserial_tx_empty(struct uart_port *port);
-static void myserial_set_mctrl(struct uart_port *port, unsigned int mctrl);
+static int		myserial_startup(struct uart_port *port);
+static void		myserial_shutdown(struct uart_port *port);
+static unsigned int	myserial_tx_empty(struct uart_port *port);
+static void		myserial_set_mctrl(struct uart_port *port, unsigned int mctrl);
 static unsigned int	myserial_get_mctrl(struct uart_port *port);
 static void		myserial_break_ctl(struct uart_port *port, int break_state);
 static void		myserial_enable_ms(struct uart_port *port) ;
 static void		myserial_release_port(struct uart_port *port) ; 
-static const char *myserial_type(struct uart_port *port);
+static const char	*myserial_type(struct uart_port *port);
 static int		myserial_request_port(struct uart_port *port) ;
 static void		myserial_config_port(struct uart_port *port, int flags) ;
 static int		myserial_verify_port(struct uart_port *port, struct serial_struct *ser) ;
 static void		myserial_set_termios(struct uart_port *port, struct ktermios *new, struct ktermios *old) ;
+
+
+int			myserial_probe(struct device * dev);
+int			myserial_remove(struct device * dev);
+int			myserial_suspend(struct device *dev, pm_message_t state);
+int			myserial_resume(struct device *dev);
 
 
 static struct uart_ops myserial_ops = {
@@ -57,36 +67,57 @@ static struct uart_ops myserial_ops = {
   .set_termios  = myserial_set_termios,
 };
 
+static struct uart_driver	myserial_uart_driver = {
+    .owner        = THIS_MODULE,
+    .driver_name  = MYSERIAL_NAME,
+    .dev_name     = "ttyS",
+    .major        = TTY_MAJOR,
+    .minor        = 64,
+    .nr           = MYSERIAL_NR,	// The nr field specifies the maximum number of serial ports this driver supports.
+  };
 
 
+static struct device_driver myserial_device_driver = {
+ name: MYSERIAL_NAME,  //fixme ? 
+ bus: NULL, //fixme
+ owner: THIS_MODULE,
+ probe: myserial_probe,
+ remove: myserial_remove,
+ suspend: myserial_suspend,
+ resume:  myserial_resume, 
+};
 
-
-
-
-
-/* struct uart_driver	myuart_driver = { */
-/*     .owner        = THIS_MODULE, */
-/*     .driver_name  = FOO_SERIAL_NAME, */
-/*     .dev_name     = "ttyS", */
-/*     .major        = TTY_MAJOR, */
-/*     .minor        = 64, */
-/*     .nr           = FOO_SERIAL_NR, */
-/*   }; */
 /*
-372 struct uart_driver {
-373         struct module           *owner;
-374         const char              *driver_name;
-375         const char              *dev_name;
-376         int                      major;
-377         int                      minor;
-378         int                      nr;
-379         struct console          *cons;
-381         
-382           these are private; the low level driver should not
-383           touch these; they should be initialised to NULL
-384          
-385         struct uart_state       *state;
-386         struct tty_driver       *tty_driver;
-387 };
+struct device_driver {
+        const char              *name;
+        struct bus_type         *bus;
+
+        struct module           *owner;
+        const char              *mod_name;       used for built-in modules 
+
+bool suppress_bind_attrs;        disables bind/unbind via sysfs 
+int (*probe) (struct device *dev);
+int (*remove) (struct device *dev);
+void (*shutdown) (struct device *dev);
+int (*suspend) (struct device *dev, pm_message_t state);
+int (*resume) (struct device *dev);
+const struct attribute_group **groups;
+
+const struct dev_pm_ops *pm;
+
+struct driver_private *p;
+};
  */
+
+//~/Documents/linux-2.6.33.4/Documentation/serial/driver
+//~/Documents/linux-2.6.33.4/include/linux/serial_core.h
+//~/Documents/linux-2.6.33.4/drivers/serial/atmel_serial.c
+//~/Documents/linux-2.6.33.4/drivers/serial/amba-pl011.c
+//~/Documents/linux-2.6.33.4/Documentation/driver-model/device.txt
+// ~/Documents/linux-2.6.33.4/include/linux/device.h
+//~/Downloads/serial-drivers.odp
+//http://www.makelinux.net/ldd3
+//http://www.linux-mips.org/wiki/Serial_Driver_and_Console
+//http://www.kernel.org/pub/linux/kernel/people/mochel/doc/text/driver.txt
+
 #endif

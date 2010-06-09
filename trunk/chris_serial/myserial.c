@@ -14,8 +14,8 @@ static	int	__init myserial_init(void)
   if (ret)
     return ret;
 
+  // pas certain pour le drriver_register
   ret = driver_register(&myserial_device_driver);
-  /* ret = platform_driver_register(/\*&atmel_serial_driver*\/); */
   if (ret)
     uart_unregister_driver(&myserial_uart_driver);
   return (ret);  

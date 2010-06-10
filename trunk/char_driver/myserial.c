@@ -4,9 +4,8 @@
 #include "myserial.h"
 
 /** 
- ** my_isr 
- ** @irq
- ** @devinfo 
+ **  
+ **  
  **/
 irqreturn_t my_isr(int irq, void *devinfo)
 {
@@ -58,8 +57,8 @@ int	my_proc_read(char *buf, char **start, off_t off, int count, int *eof, void *
 }
 
 /*
-** TODO : configurer tty en serial
-** Initialisation du module/driver, configuration de l'uart
+** 
+** 
 */
 static int __init	uart_init(void)
 {
@@ -78,7 +77,7 @@ static int __init	uart_init(void)
   outb(0x00, UART_IER);
 
   /*
-  ** Chris:  faut-il prendre en compte l'endianess (little)?, le 14 bytes me parait louche, le reste me parait logique
+  ** Chris:  faut-il prendre en compte l'endianess?, le 14 bytes me parait louche, le reste me parait logique
   ** 0xC7 <=> 1100 0111
   ** Bit 0	[1]	=> Enable FIFO
   ** Bit 1	[1]	=> Clear receive FIFO
@@ -89,8 +88,6 @@ static int __init	uart_init(void)
   ** Bit 6/7	[1][1]	=> interupt every 14 bytes 
    */
   outb(0xC7, UART_FCR);
-
-  //83 10000011
 
   /*
   ** 0x83 <=> 1000 0011
@@ -107,16 +104,16 @@ static int __init	uart_init(void)
   outb(0x00, UART_DLM);
   // data word len = 8 bits
   outb(0x03, UART_LCR);
-  // DTR = true  RTS = true (pas certain)
+  // DTR = true  RTS = true (pas certaincar ca conincide pas avec le "no dtr" du commentaire)
   outb(0x03, UART_MCR);
 
   // reseting 4 lsb registers qui vont servir pour la reception et transmission de data
   inb(UART_MSR);
-  // ??
+  // 
   inb(UART_LSR);
-  // ??
+  // 
   inb(UART_RX_DATA);
-  // ??
+  // 
   inb(UART_IIR);
   
   // demande d'irq

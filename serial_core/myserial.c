@@ -18,7 +18,7 @@ static	int	__init myserial_init(void)
   ret = driver_register(&myserial_device_driver);
   if (ret)
     uart_unregister_driver(&myserial_uart_driver);
-  return (ret);  
+  return (ret);
 }
 
 
@@ -94,47 +94,47 @@ static void myserial_shutdown(struct uart_port *port)
 }
 
 //Optionals
-static unsigned int myserial_tx_empty(struct uart_port *port) 
+static unsigned int myserial_tx_empty(struct uart_port *port)
 {
   return 0;
 }
 
-static void myserial_set_mctrl(struct uart_port *port, unsigned int mctrl) 
-{ 
-}
-
-static unsigned int myserial_get_mctrl(struct uart_port *port) 
-{ 
-  return 0;
-}
-
-static void myserial_break_ctl(struct uart_port *port, int break_state) 
-{ 
-
-}
-
-static void myserial_enable_ms(struct uart_port *port) 
-{ 
-}
-
-static void myserial_release_port(struct uart_port *port) 
-{ 
-}
-
-static int myserial_request_port(struct uart_port *port) 
-{ 
-  return 0;
-}
-static void myserial_config_port(struct uart_port *port, int flags) 
+static void myserial_set_mctrl(struct uart_port *port, unsigned int mctrl)
 {
 }
 
-static int myserial_verify_port(struct uart_port *port, struct serial_struct *ser) 
-{ 
-  return 0; 
+static unsigned int myserial_get_mctrl(struct uart_port *port)
+{
+  return 0;
 }
 
-static void myserial_set_termios(struct uart_port *port, struct ktermios *new, struct ktermios *old) 
+static void myserial_break_ctl(struct uart_port *port, int break_state)
+{
+
+}
+
+static void myserial_enable_ms(struct uart_port *port)
+{
+}
+
+static void myserial_release_port(struct uart_port *port)
+{
+}
+
+static int myserial_request_port(struct uart_port *port)
+{
+  return 0;
+}
+static void myserial_config_port(struct uart_port *port, int flags)
+{
+}
+
+static int myserial_verify_port(struct uart_port *port, struct serial_struct *ser)
+{
+  return 0;
+}
+
+static void myserial_set_termios(struct uart_port *port, struct ktermios *new, struct ktermios *old)
 {
 }
 

@@ -118,7 +118,7 @@ static int __init my_init(void)
   outb(0x83, LINE_CONTROL);// set DLAB=1
   outw(0x0001, DIVISOR_LATCH);// maximum baudrate
   outb(0x03, LINE_CONTROL);// 8-N-1 data-frame
-  outb(0x00, MODEM_CONTROL);// RTS=0 
+  outb(0x00, MODEM_CONTROL);// RTS=0
 
   return register_chrdev(my_major, devname, &my_fops);
 }
@@ -131,7 +131,7 @@ static void __exit my_exit(void)
 
 module_init(my_init);
 module_exit(my_exit);
-MODULE_LICENSE("GPL"); 
+MODULE_LICENSE("GPL");
 
 
 /*
